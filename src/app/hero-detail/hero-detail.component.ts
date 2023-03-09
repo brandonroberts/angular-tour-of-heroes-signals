@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Location, NgIf, UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -18,7 +18,7 @@ import { HeroService } from '../hero.service';
   styleUrls: [ './hero-detail.component.css' ]
 })
 export class HeroDetailComponent implements OnInit {
-  hero: Hero | undefined;
+  hero = signal<Hero | null>(null)!;
 
   constructor(
     private route: ActivatedRoute,
@@ -26,24 +26,30 @@ export class HeroDetailComponent implements OnInit {
     private location: Location
   ) {}
 
-  ngOnInit(): void {
-    this.getHero();
+  async ngOnInit() {
+    await this.getHero();
   }
 
-  getHero(): void {
-    const id = parseInt(this.route.snapshot.paramMap.get('id')!, 10);
-    this.heroService.getHero(id)
-      .subscribe(hero => this.hero = hero);
+  async getHero() {
+    const hero = await this.heroService.getHero(parseInt(this.route.snapshot.paramMap.get('id')!, 10));
+
+    this.hero.set(hero);
   }
 
   goBack(): void {
     this.location.back();
   }
 
-  save(): void {
-    if (this.hero) {
-      this.heroService.updateHero(this.hero)
-        .subscribe(() => this.goBack());
+  updateHero(name: string) {
+    this.hero.mutate(hero => hero!.name = name);
+  }
+
+  async save() {
+    const hero = this.hero();
+
+    if (hero) {
+      await this.heroService.updateHero(hero);
+      this.goBack();
     }
   }
 }

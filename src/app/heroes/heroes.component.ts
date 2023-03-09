@@ -1,5 +1,5 @@
 import { NgFor } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { Hero } from '../hero';
@@ -16,31 +16,28 @@ import { HeroService } from '../hero.service';
   styleUrls: ['./heroes.component.css']
 })
 export class HeroesComponent implements OnInit {
-  heroes: Hero[] = [];
+  heroes = signal<Hero[]>([]);
 
   constructor(private heroService: HeroService) { }
 
-  ngOnInit(): void {
-    this.getHeroes();
+  async ngOnInit() {
+    await this.getHeroes();
   }
 
-  getHeroes(): void {
-    this.heroService.getHeroes()
-    .then(heroes => this.heroes = heroes);
+  async getHeroes() {
+    const heroes = await this.heroService.getHeroes();
+    this.heroes.set(heroes);
   }
 
-  add(name: string): void {
+  async add(name: string) {
     name = name.trim();
     if (!name) { return; }
-    this.heroService.addHero({ name } as Hero)
-      .subscribe(hero => {
-        this.heroes.push(hero);
-      });
+    const hero = await this.heroService.addHero({ name } as Hero)
+    this.heroes.mutate(heroes => heroes.push(hero));
   }
 
   delete(hero: Hero): void {
-    this.heroes = this.heroes.filter(h => h !== hero);
-    this.heroService.deleteHero(hero.id).subscribe();
+    this.heroService.deleteHero(hero.id);
+    this.heroes.mutate(heroes => heroes.filter(h => h !== hero));
   }
-
 }
